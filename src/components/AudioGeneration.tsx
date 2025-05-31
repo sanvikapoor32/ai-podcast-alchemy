@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Play, Download, RefreshCw, Waveform } from 'lucide-react';
+import { Play, Download, RefreshCw, AudioWaveform } from 'lucide-react';
 import { AudioSegment, VoiceOptions } from '../types/podcast';
 import AudioPlayer from './AudioPlayer';
 
@@ -137,7 +137,7 @@ const AudioGeneration = ({
     <Card>
       <CardHeader>
         <CardTitle className="text-lg text-purple-600 flex items-center gap-2">
-          <Waveform className="h-5 w-5" />
+          <AudioWaveform className="h-5 w-5" />
           Audio Generation
         </CardTitle>
       </CardHeader>
