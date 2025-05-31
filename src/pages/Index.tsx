@@ -3,13 +3,22 @@ import React, { useState } from 'react';
 import Header from '../components/Header';
 import InputSection from '../components/InputSection';
 import ScriptDisplay from '../components/ScriptDisplay';
+import VoiceSelector from '../components/VoiceSelector';
+import AudioGeneration from '../components/AudioGeneration';
 import Footer from '../components/Footer';
-import { ScriptData, GenerationOptions } from '../types/podcast';
+import { ScriptData, GenerationOptions, VoiceOptions, AudioSegment } from '../types/podcast';
 
 const Index = () => {
   const [generatedScript, setGeneratedScript] = useState<ScriptData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [voiceOptions, setVoiceOptions] = useState<VoiceOptions>({
+    host: 'alloy',
+    guest: 'nova',
+    speed: 1.0,
+    backgroundMusic: false
+  });
+  const [audioSegments, setAudioSegments] = useState<AudioSegment[]>([]);
 
   const handleGenerate = async (topic: string, options: GenerationOptions) => {
     setIsGenerating(true);
@@ -43,12 +52,17 @@ const Index = () => {
 
       const data = await response.text();
       
-      setGeneratedScript({
+      const scriptData: ScriptData = {
         content: data,
         topic,
         options,
-        generatedAt: new Date()
-      });
+        generatedAt: new Date(),
+        voiceOptions,
+        audioSegments: []
+      };
+      
+      setGeneratedScript(scriptData);
+      setAudioSegments([]); // Reset audio segments for new script
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while generating the script');
@@ -57,21 +71,56 @@ const Index = () => {
     }
   };
 
+  const handleVoiceOptionsChange = (newVoiceOptions: VoiceOptions) => {
+    setVoiceOptions(newVoiceOptions);
+    if (generatedScript) {
+      setGeneratedScript({
+        ...generatedScript,
+        voiceOptions: newVoiceOptions
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <InputSection 
-            onGenerate={handleGenerate}
-            isGenerating={isGenerating}
-            error={error}
-          />
-          <ScriptDisplay 
-            script={generatedScript}
-            isGenerating={isGenerating}
-            onRegenerateSection={handleGenerate}
-          />
+          {/* Left Column - Input and Voice Selection */}
+          <div className="space-y-6">
+            <InputSection 
+              onGenerate={handleGenerate}
+              isGenerating={isGenerating}
+              error={error}
+            />
+            
+            {generatedScript && (
+              <VoiceSelector
+                voiceOptions={voiceOptions}
+                onVoiceOptionsChange={handleVoiceOptionsChange}
+                hostStyle={generatedScript.options.hostStyle}
+              />
+            )}
+          </div>
+
+          {/* Right Column - Script Display and Audio */}
+          <div className="space-y-6">
+            <ScriptDisplay 
+              script={generatedScript}
+              isGenerating={isGenerating}
+              onRegenerateSection={handleGenerate}
+            />
+            
+            {generatedScript && (
+              <AudioGeneration
+                scriptContent={generatedScript.content}
+                voiceOptions={voiceOptions}
+                audioSegments={audioSegments}
+                onAudioSegmentsChange={setAudioSegments}
+                hostStyle={generatedScript.options.hostStyle}
+              />
+            )}
+          </div>
         </div>
       </main>
       <Footer />
