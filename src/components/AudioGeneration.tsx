@@ -7,7 +7,8 @@ import AudioPlayer from './AudioPlayer';
 import AudioGenerationControls from './AudioGenerationControls';
 import AudioProgressTracker from './AudioProgressTracker';
 import AudioSegmentsList from './AudioSegmentsList';
-import { parseScriptIntoSegments, generateAudioForSegment, downloadAudio } from '../utils/audioUtils';
+import { parseScriptIntoSegments, generateAudioForSegment, downloadAudio, downloadMergedAudio } from '../utils/audioUtils';
+import { toast } from 'sonner';
 
 interface AudioGenerationProps {
   scriptContent: string;
@@ -25,6 +26,7 @@ const AudioGeneration = ({
   hostStyle 
 }: AudioGenerationProps) => {
   const [generatingAll, setGeneratingAll] = useState(false);
+  const [downloadingMerged, setDownloadingMerged] = useState(false);
   const [currentAudio, setCurrentAudio] = useState<string | null>(null);
 
   const handleGenerateAllAudio = async () => {
@@ -45,6 +47,7 @@ const AudioGeneration = ({
     
     setGeneratingAll(false);
     console.log('Batch audio generation completed');
+    toast.success('All audio segments generated successfully!');
   };
 
   const handleDownloadAllAudio = async () => {
@@ -53,12 +56,36 @@ const AudioGeneration = ({
     
     if (audioSegmentsWithAudio.length === 0) {
       console.warn('No audio segments available for download');
+      toast.error('No audio segments available for download');
       return;
     }
 
     audioSegmentsWithAudio.forEach((segment, index) => {
       setTimeout(() => downloadAudio(segment, index), index * 500); // Stagger downloads
     });
+    
+    toast.success(`Started downloading ${audioSegmentsWithAudio.length} audio segments`);
+  };
+
+  const handleDownloadMergedAudio = async () => {
+    const audioSegmentsWithAudio = audioSegments.filter(s => s.audioBlob);
+    
+    if (audioSegmentsWithAudio.length === 0) {
+      toast.error('No audio segments available for merging');
+      return;
+    }
+
+    setDownloadingMerged(true);
+    
+    try {
+      await downloadMergedAudio(audioSegmentsWithAudio);
+      toast.success('Merged audio downloaded successfully!');
+    } catch (error) {
+      console.error('Merged download failed:', error);
+      toast.error('Failed to download merged audio. Try downloading individual segments instead.');
+    } finally {
+      setDownloadingMerged(false);
+    }
   };
 
   const handlePlayAudio = (audioUrl: string) => {
@@ -89,9 +116,11 @@ const AudioGeneration = ({
         <AudioGenerationControls
           onGenerateAll={handleGenerateAllAudio}
           onDownloadAll={handleDownloadAllAudio}
+          onDownloadMerged={handleDownloadMergedAudio}
           generatingAll={generatingAll}
           generatedCount={generatedCount}
           scriptContent={scriptContent}
+          downloadingMerged={downloadingMerged}
         />
 
         <AudioProgressTracker

@@ -11,6 +11,7 @@ export const parseScriptIntoSegments = (content: string, voiceOptions: VoiceOpti
       const isGuestLine = hostStyle === 'multiple' && 
         (trimmedLine.toLowerCase().includes('guest:') || 
          trimmedLine.toLowerCase().includes('interviewer:') ||
+         trimmedLine.toLowerCase().includes('neha:') ||
          index % 4 === 2);
       
       segments.push({
@@ -45,6 +46,10 @@ export const generateAudioForSegment = async (
       .replace(/Host:/gi, '')
       .replace(/Guest:/gi, '')
       .replace(/Interviewer:/gi, '')
+      .replace(/Ravi:/gi, '')
+      .replace(/Neha:/gi, '')
+      .replace(/Host \d+ \([^)]+\):/gi, '')
+      .replace(/Host \d+ \([^)]+\):/gi, '')
       .trim();
 
     console.log('Generating audio for text:', cleanText);
@@ -118,6 +123,118 @@ export const generateAudioForSegment = async (
   }
 };
 
+export const mergeAudioSegments = async (segments: AudioSegment[]): Promise<Blob> => {
+  console.log('Starting audio merge for', segments.length, 'segments');
+  
+  // Filter segments that have audio blobs
+  const validSegments = segments.filter(s => s.audioBlob && s.audioBlob.size > 0);
+  
+  if (validSegments.length === 0) {
+    throw new Error('No valid audio segments to merge');
+  }
+
+  if (validSegments.length === 1) {
+    console.log('Only one segment, returning as-is');
+    return validSegments[0].audioBlob!;
+  }
+
+  try {
+    // Create audio context for merging
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioBuffers: AudioBuffer[] = [];
+
+    // Load all audio segments into AudioBuffers
+    for (const segment of validSegments) {
+      console.log('Loading segment for merge:', segment.id);
+      const arrayBuffer = await segment.audioBlob!.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      audioBuffers.push(audioBuffer);
+    }
+
+    // Calculate total duration
+    const totalDuration = audioBuffers.reduce((sum, buffer) => sum + buffer.duration, 0);
+    const sampleRate = audioBuffers[0].sampleRate;
+    const numberOfChannels = audioBuffers[0].numberOfChannels;
+
+    console.log(`Merging audio: ${totalDuration}s total, ${sampleRate}Hz, ${numberOfChannels} channels`);
+
+    // Create merged buffer
+    const mergedBuffer = audioContext.createBuffer(
+      numberOfChannels,
+      Math.ceil(totalDuration * sampleRate),
+      sampleRate
+    );
+
+    // Copy audio data
+    let offset = 0;
+    for (const buffer of audioBuffers) {
+      for (let channel = 0; channel < numberOfChannels; channel++) {
+        const channelData = buffer.getChannelData(channel);
+        mergedBuffer.getChannelData(channel).set(channelData, offset);
+      }
+      offset += buffer.length;
+    }
+
+    // Convert back to blob
+    const mergedBlob = await audioBufferToBlob(mergedBuffer);
+    console.log('Audio merge completed, final size:', mergedBlob.size);
+    
+    return mergedBlob;
+    
+  } catch (error) {
+    console.error('Audio merge failed:', error);
+    throw new Error(`Failed to merge audio segments: ${error.message}`);
+  }
+};
+
+// Helper function to convert AudioBuffer to Blob
+const audioBufferToBlob = async (audioBuffer: AudioBuffer): Promise<Blob> => {
+  const numberOfChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const format = 1; // PCM
+  const bitDepth = 16;
+
+  const bytesPerSample = bitDepth / 8;
+  const blockAlign = numberOfChannels * bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = audioBuffer.length * blockAlign;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  // WAV header
+  const writeString = (offset: number, string: string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  };
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, format, true);
+  view.setUint16(22, numberOfChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitDepth, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  // Convert float samples to 16-bit PCM
+  let offset = 44;
+  for (let i = 0; i < audioBuffer.length; i++) {
+    for (let channel = 0; channel < numberOfChannels; channel++) {
+      const sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(channel)[i]));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+      offset += 2;
+    }
+  }
+
+  return new Blob([buffer], { type: 'audio/wav' });
+};
+
 export const downloadAudio = (segment: AudioSegment, index: number): void => {
   if (!segment.audioBlob) {
     console.error('No audio blob available for segment:', segment.id);
@@ -129,6 +246,7 @@ export const downloadAudio = (segment: AudioSegment, index: number): void => {
     const a = document.createElement('a');
     a.href = url;
     a.download = `podcast-segment-${index + 1}-${Date.now()}.mp3`;
+    a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -139,5 +257,29 @@ export const downloadAudio = (segment: AudioSegment, index: number): void => {
     console.log('Download initiated for segment:', segment.id);
   } catch (error) {
     console.error('Download failed for segment:', segment.id, error);
+  }
+};
+
+export const downloadMergedAudio = async (segments: AudioSegment[]): Promise<void> => {
+  try {
+    console.log('Starting merged audio download');
+    const mergedBlob = await mergeAudioSegments(segments);
+    
+    const url = URL.createObjectURL(mergedBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `podcast-full-${Date.now()}.wav`;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    // Clean up the URL after a short delay
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    
+    console.log('Merged audio download completed');
+  } catch (error) {
+    console.error('Merged download failed:', error);
+    throw error;
   }
 };
