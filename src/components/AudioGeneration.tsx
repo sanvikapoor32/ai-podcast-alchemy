@@ -68,14 +68,20 @@ const AudioGeneration = ({
   };
 
   const handleDownloadMergedAudio = async () => {
+    const totalSegments = audioSegments.length || parseScriptIntoSegments(scriptContent, voiceOptions, hostStyle).length;
     const audioSegmentsWithAudio = audioSegments.filter(s => s.audioBlob);
     
     console.log('Attempting to download merged audio');
-    console.log('Total segments:', audioSegments.length);
+    console.log('Total segments:', totalSegments);
     console.log('Segments with audio blobs:', audioSegmentsWithAudio.length);
     
     if (audioSegmentsWithAudio.length === 0) {
       toast.error('No audio segments available for merging');
+      return;
+    }
+
+    if (audioSegmentsWithAudio.length < totalSegments) {
+      toast.error(`Please generate all audio segments first. Only ${audioSegmentsWithAudio.length} of ${totalSegments} segments have been generated.`);
       return;
     }
 
