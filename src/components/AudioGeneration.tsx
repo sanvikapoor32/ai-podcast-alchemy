@@ -70,6 +70,10 @@ const AudioGeneration = ({
   const handleDownloadMergedAudio = async () => {
     const audioSegmentsWithAudio = audioSegments.filter(s => s.audioBlob);
     
+    console.log('Attempting to download merged audio');
+    console.log('Total segments:', audioSegments.length);
+    console.log('Segments with audio blobs:', audioSegmentsWithAudio.length);
+    
     if (audioSegmentsWithAudio.length === 0) {
       toast.error('No audio segments available for merging');
       return;
@@ -102,7 +106,7 @@ const AudioGeneration = ({
   };
 
   const segments = audioSegments.length > 0 ? audioSegments : parseScriptIntoSegments(scriptContent, voiceOptions, hostStyle);
-  const generatedCount = segments.filter(s => s.audioUrl).length;
+  const generatedCount = segments.filter(s => s.audioBlob).length;
 
   return (
     <Card>

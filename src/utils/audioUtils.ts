@@ -128,6 +128,7 @@ export const mergeAudioSegments = async (segments: AudioSegment[]): Promise<Blob
   
   // Filter segments that have audio blobs
   const validSegments = segments.filter(s => s.audioBlob && s.audioBlob.size > 0);
+  console.log('Valid segments for merging:', validSegments.length);
   
   if (validSegments.length === 0) {
     throw new Error('No valid audio segments to merge');
@@ -263,6 +264,9 @@ export const downloadAudio = (segment: AudioSegment, index: number): void => {
 export const downloadMergedAudio = async (segments: AudioSegment[]): Promise<void> => {
   try {
     console.log('Starting merged audio download');
+    console.log('Total segments received:', segments.length);
+    console.log('Segments with audioBlob:', segments.filter(s => s.audioBlob).length);
+    
     const mergedBlob = await mergeAudioSegments(segments);
     
     const url = URL.createObjectURL(mergedBlob);
