@@ -32,19 +32,22 @@ const Index = () => {
                      Complexity: ${options.complexity}.
                      ${options.hostStyle === 'multiple' ? 'Include dialogue between multiple hosts.' : 'Single host format.'}`;
 
-      const response = await fetch('https://text.pollinations.ai/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{
-            role: 'system',
-            content: prompt
-          }],
-          model: 'openai',
-          temperature: 0.7,
-          max_tokens: 2000
-        })
-      });
+    const tokensPerMinute = 210;
+const estimatedTokens = options.duration * tokensPerMinute;
+
+const response = await fetch('https://text.pollinations.ai/', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    messages: [{
+      role: 'system',
+      content: prompt
+    }],
+    model: 'openai',
+    temperature: 0.7,
+    max_tokens: estimatedTokens
+  })
+});
 
       if (!response.ok) {
         throw new Error('Failed to generate script');
