@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from '../components/Header';
 import InputSection from '../components/InputSection';
@@ -7,6 +6,8 @@ import VoiceSelector from '../components/VoiceSelector';
 import AudioGeneration from '../components/AudioGeneration';
 import Footer from '../components/Footer';
 import { ScriptData, GenerationOptions, VoiceOptions, AudioSegment } from '../types/podcast';
+import CustomScriptInput from '../components/CustomScriptInput';
+import MergedAudioPlayer from '../components/MergedAudioPlayer';
 
 const Index = () => {
   const [generatedScript, setGeneratedScript] = useState<ScriptData | null>(null);
@@ -72,6 +73,12 @@ const Index = () => {
     }
   };
 
+  const handleCustomScript = (scriptData: ScriptData) => {
+    setGeneratedScript(scriptData);
+    setAudioSegments([]); // Reset audio segments for new script
+    setError(null);
+  };
+
   const handleVoiceOptionsChange = (newVoiceOptions: VoiceOptions) => {
     setVoiceOptions(newVoiceOptions);
     if (generatedScript) {
@@ -95,6 +102,8 @@ const Index = () => {
               error={error}
             />
             
+            <CustomScriptInput onScriptSubmit={handleCustomScript} />
+            
             {generatedScript && (
               <VoiceSelector
                 voiceOptions={voiceOptions}
@@ -113,13 +122,22 @@ const Index = () => {
             />
             
             {generatedScript && (
-              <AudioGeneration
-                scriptContent={generatedScript.content}
-                voiceOptions={voiceOptions}
-                audioSegments={audioSegments}
-                onAudioSegmentsChange={setAudioSegments}
-                hostStyle={generatedScript.options.hostStyle}
-              />
+              <>
+                <AudioGeneration
+                  scriptContent={generatedScript.content}
+                  voiceOptions={voiceOptions}
+                  audioSegments={audioSegments}
+                  onAudioSegmentsChange={setAudioSegments}
+                  hostStyle={generatedScript.options.hostStyle}
+                />
+                
+                {audioSegments.filter(s => s.audioBlob).length > 0 && (
+                  <MergedAudioPlayer
+                    audioSegments={audioSegments}
+                    backgroundMusic={voiceOptions.backgroundMusic}
+                  />
+                )}
+              </>
             )}
           </div>
         </div>

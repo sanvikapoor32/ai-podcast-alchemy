@@ -34,6 +34,7 @@ export interface ScriptData {
   generatedAt: Date;
   audioSegments?: AudioSegment[];
   voiceOptions?: VoiceOptions;
+  isCustomScript?: boolean;
 }
 
 export const AVAILABLE_VOICES = [
@@ -42,5 +43,12 @@ export const AVAILABLE_VOICES = [
   { id: 'fable', name: 'Fable', description: 'Calm Male' },
   { id: 'nova', name: 'Nova', description: 'Friendly Female' },
   { id: 'onyx', name: 'Onyx', description: 'Deep Male' },
-  { id: 'shimmer', name: 'Shimmer', description: 'Warm Female' }
+  { id: 'shimmer', name: 'Shimmer', description: 'Warm Female' },
+  { id: 'coral', name: 'Coral', description: 'Vibrant Female' },
+  { id: 'verse', name: 'Verse', description: 'Narrative Male' },
+  { id: 'ballad', name: 'Ballad', description: 'Musical Female' },
+  { id: 'ash', name: 'Ash', description: 'Smooth Male' },
+  { id: 'sage', name: 'Sage', description: 'Wise Female' },
+  { id: 'amuch', name: 'Amuch', description: 'Dynamic Male' },
+  { id: 'dan', name: 'Dan', description: 'Clear Male' }
 ] as const;
