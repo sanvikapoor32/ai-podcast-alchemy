@@ -68,12 +68,14 @@ const AudioGeneration = ({
   };
 
   const handleDownloadMergedAudio = async () => {
-    const totalSegments = audioSegments.length || parseScriptIntoSegments(scriptContent, voiceOptions, hostStyle).length;
+    // Use the current audioSegments array directly since it should contain all segments
     const audioSegmentsWithAudio = audioSegments.filter(s => s.audioBlob);
+    const totalSegments = audioSegments.length;
     
     console.log('Attempting to download merged audio');
-    console.log('Total segments:', totalSegments);
+    console.log('Total segments in state:', totalSegments);
     console.log('Segments with audio blobs:', audioSegmentsWithAudio.length);
+    console.log('Audio segments details:', audioSegments.map(s => ({ id: s.id, hasBlob: !!s.audioBlob })));
     
     if (audioSegmentsWithAudio.length === 0) {
       toast.error('No audio segments available for merging');
