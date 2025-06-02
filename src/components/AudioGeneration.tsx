@@ -36,9 +36,23 @@ const AudioGeneration = ({
 
     console.log('Starting batch audio generation for', segments.length, 'segments');
 
+    // Use a local variable to track segments and update state after each generation
+    let updatedSegments = [...segments];
+
     for (let i = 0; i < segments.length; i++) {
       console.log(`Generating audio for segment ${i + 1}/${segments.length}`);
-      await generateAudioForSegment(segments[i], voiceOptions, segments, onAudioSegmentsChange);
+      
+      // Pass the current updated segments array and get the result
+      await generateAudioForSegment(
+        segments[i], 
+        voiceOptions, 
+        updatedSegments, 
+        (newSegments) => {
+          updatedSegments = [...newSegments];
+          onAudioSegmentsChange(updatedSegments);
+        }
+      );
+      
       // Add delay between generations to avoid rate limiting
       if (i < segments.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -47,6 +61,7 @@ const AudioGeneration = ({
     
     setGeneratingAll(false);
     console.log('Batch audio generation completed');
+    console.log('Final segments with audio:', updatedSegments.filter(s => s.audioBlob).length);
     toast.success('All audio segments generated successfully!');
   };
 
@@ -68,14 +83,13 @@ const AudioGeneration = ({
   };
 
   const handleDownloadMergedAudio = async () => {
-    // Use the current audioSegments array directly since it should contain all segments
     const audioSegmentsWithAudio = audioSegments.filter(s => s.audioBlob);
     const totalSegments = audioSegments.length;
     
     console.log('Attempting to download merged audio');
     console.log('Total segments in state:', totalSegments);
     console.log('Segments with audio blobs:', audioSegmentsWithAudio.length);
-    console.log('Audio segments details:', audioSegments.map(s => ({ id: s.id, hasBlob: !!s.audioBlob })));
+    console.log('Audio segments details:', audioSegments.map(s => ({ id: s.id, hasBlob: !!s.audioBlob, text: s.text.substring(0, 50) + '...' })));
     
     if (audioSegmentsWithAudio.length === 0) {
       toast.error('No audio segments available for merging');
