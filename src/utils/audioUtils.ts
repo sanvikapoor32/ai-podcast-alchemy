@@ -56,7 +56,7 @@ export const generateAudioForSegment = async (
     console.log('Using voice:', segment.voice);
 
     const encodedText = encodeURIComponent(cleanText);
-    const audioUrl = `https://text.pollinations.ai/${encodedText}?model=openai-audio&voice=${segment.voice}&speed=${voiceOptions.speed || 1.0}`;
+    const audioUrl = `https://text.pollinations.ai/please_say_this:${encodedText}?model=openai-audio&voice=${segment.voice}&speed=${voiceOptions.speed || 1.0}`;
     
     console.log('Audio API URL:', audioUrl);
     
