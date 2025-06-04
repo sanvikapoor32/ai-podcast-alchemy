@@ -50,6 +50,13 @@ const MergedAudioPlayer = ({
     }
   }, [backgroundMusic, backgroundMusicFile, backgroundVolume]);
 
+  // Update background music volume when it changes
+  useEffect(() => {
+    if (backgroundAudioRef.current) {
+      backgroundAudioRef.current.volume = backgroundVolume / 100;
+    }
+  }, [backgroundVolume]);
+
   const generateMergedAudio = async () => {
     if (validSegments.length === 0) return;
 
@@ -87,8 +94,12 @@ const MergedAudioPlayer = ({
       }
     } else {
       audioRef.current.play();
-      if (backgroundMusic && backgroundAudioRef.current) {
-        backgroundAudioRef.current.play();
+      if (backgroundMusic && backgroundMusicFile && backgroundAudioRef.current) {
+        // Ensure background music is loaded and ready
+        if (backgroundAudioRef.current.src) {
+          backgroundAudioRef.current.currentTime = audioRef.current.currentTime;
+          backgroundAudioRef.current.play().catch(console.error);
+        }
       }
     }
     setIsPlaying(!isPlaying);
@@ -99,7 +110,7 @@ const MergedAudioPlayer = ({
       setCurrentTime(audioRef.current.currentTime);
       
       // Sync background music
-      if (backgroundMusic && backgroundAudioRef.current) {
+      if (backgroundMusic && backgroundAudioRef.current && backgroundAudioRef.current.src) {
         const timeDiff = Math.abs(backgroundAudioRef.current.currentTime - audioRef.current.currentTime);
         if (timeDiff > 0.5) { // Resync if more than 0.5s difference
           backgroundAudioRef.current.currentTime = audioRef.current.currentTime;
@@ -114,7 +125,7 @@ const MergedAudioPlayer = ({
       setCurrentTime(newTime[0]);
       
       // Sync background music
-      if (backgroundMusic && backgroundAudioRef.current) {
+      if (backgroundMusic && backgroundAudioRef.current && backgroundAudioRef.current.src) {
         backgroundAudioRef.current.currentTime = newTime[0];
       }
     }
@@ -132,7 +143,7 @@ const MergedAudioPlayer = ({
     if (audioRef.current) {
       const newTime = Math.min(audioRef.current.currentTime + 15, duration);
       audioRef.current.currentTime = newTime;
-      if (backgroundMusic && backgroundAudioRef.current) {
+      if (backgroundMusic && backgroundAudioRef.current && backgroundAudioRef.current.src) {
         backgroundAudioRef.current.currentTime = newTime;
       }
     }
@@ -142,7 +153,7 @@ const MergedAudioPlayer = ({
     if (audioRef.current) {
       const newTime = Math.max(audioRef.current.currentTime - 15, 0);
       audioRef.current.currentTime = newTime;
-      if (backgroundMusic && backgroundAudioRef.current) {
+      if (backgroundMusic && backgroundAudioRef.current && backgroundAudioRef.current.src) {
         backgroundAudioRef.current.currentTime = newTime;
       }
     }
@@ -211,7 +222,11 @@ const MergedAudioPlayer = ({
               <audio
                 ref={backgroundAudioRef}
                 loop
-                volume={backgroundVolume / 100}
+                onLoadedData={() => {
+                  if (backgroundAudioRef.current) {
+                    backgroundAudioRef.current.volume = backgroundVolume / 100;
+                  }
+                }}
               />
             )}
 
@@ -296,10 +311,15 @@ const MergedAudioPlayer = ({
                 <div className="flex items-center gap-2 mb-2">
                   <Music className="h-5 w-5 text-blue-600" />
                   <span className="font-medium text-blue-800">Background Music Active</span>
+                  <span className="text-sm text-blue-600">
+                    (Volume: {backgroundVolume}%)
+                  </span>
                 </div>
                 <div className="text-sm text-blue-700">
                   <p><strong>File:</strong> {backgroundMusicFile.name}</p>
-                  <p><strong>Volume:</strong> {backgroundVolume}%</p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Music will play automatically when you start the podcast
+                  </p>
                 </div>
               </div>
             )}
