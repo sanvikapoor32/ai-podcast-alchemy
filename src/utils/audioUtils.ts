@@ -1,5 +1,4 @@
-
-import { AudioSegment, VoiceOptions } from '../types/podcast';
+import { AudioSegment, VoiceOptions, Host } from '../types/podcast';
 
 export const parseScriptIntoSegments = (content: string, voiceOptions: VoiceOptions, hostStyle: 'single' | 'multiple'): AudioSegment[] => {
   const lines = content.split('\n').filter(line => line.trim());
@@ -7,17 +6,45 @@ export const parseScriptIntoSegments = (content: string, voiceOptions: VoiceOpti
   
   lines.forEach((line, index) => {
     const trimmedLine = line.trim();
-    if (trimmedLine && !trimmedLine.startsWith('[') && !trimmedLine.startsWith('(')) {
-      const isGuestLine = hostStyle === 'multiple' && 
-        (trimmedLine.toLowerCase().includes('guest:') || 
-         trimmedLine.toLowerCase().includes('interviewer:') ||
-         trimmedLine.toLowerCase().includes('neha:') ||
-         index % 4 === 2);
+    if (trimmedLine && !trimmedLine.startsWith('(') && !trimmedLine.startsWith('[') && trimmedLine.length > 3) {
+      let assignedVoice = voiceOptions.host;
+      let hostName = 'Host 1';
+      
+      // Check for host tags like [Host Name] or Host Name:
+      const hostTagMatch = trimmedLine.match(/^\[([^\]]+)\]/);
+      const hostColonMatch = trimmedLine.match(/^([^:]+):/);
+      
+      if (hostTagMatch && voiceOptions.hosts) {
+        const taggedHostName = hostTagMatch[1].trim();
+        const foundHost = voiceOptions.hosts.find(h => 
+          h.name.toLowerCase() === taggedHostName.toLowerCase()
+        );
+        if (foundHost) {
+          assignedVoice = foundHost.voice;
+          hostName = foundHost.name;
+        }
+      } else if (hostColonMatch && voiceOptions.hosts) {
+        const colonHostName = hostColonMatch[1].trim();
+        const foundHost = voiceOptions.hosts.find(h => 
+          h.name.toLowerCase() === colonHostName.toLowerCase() ||
+          colonHostName.toLowerCase().includes(h.name.toLowerCase())
+        );
+        if (foundHost) {
+          assignedVoice = foundHost.voice;
+          hostName = foundHost.name;
+        }
+      } else if (hostStyle === 'multiple' && voiceOptions.hosts && voiceOptions.hosts.length > 1) {
+        // Alternate between hosts if no specific assignment
+        const hostIndex = index % voiceOptions.hosts.length;
+        assignedVoice = voiceOptions.hosts[hostIndex].voice;
+        hostName = voiceOptions.hosts[hostIndex].name;
+      }
       
       segments.push({
         id: `segment-${index}`,
         text: trimmedLine,
-        voice: isGuestLine ? (voiceOptions.guest || voiceOptions.host) : voiceOptions.host,
+        voice: assignedVoice,
+        hostName,
         generatingAudio: false
       });
     }
@@ -33,6 +60,7 @@ export const generateAudioForSegment = async (
   onAudioSegmentsChange: (segments: AudioSegment[]) => void
 ): Promise<void> => {
   console.log('Starting audio generation for segment:', segment.id);
+  console.log('Using voice:', segment.voice, 'for host:', segment.hostName);
   
   try {
     // Update segment to show it's generating
@@ -43,17 +71,11 @@ export const generateAudioForSegment = async (
 
     // Clean the text for better audio generation
     const cleanText = segment.text
-      .replace(/Host:/gi, '')
-      .replace(/Guest:/gi, '')
-      .replace(/Interviewer:/gi, '')
-      .replace(/Ravi:/gi, '')
-      .replace(/Neha:/gi, '')
-      .replace(/Host \d+ \([^)]+\):/gi, '')
-      .replace(/Host \d+ \([^)]+\):/gi, '')
+      .replace(/^\[([^\]]+)\]\s*/, '') // Remove [Host Name] tags
+      .replace(/^([^:]+):\s*/, '') // Remove Host Name: prefixes
       .trim();
 
     console.log('Generating audio for text:', cleanText);
-    console.log('Using voice:', segment.voice);
 
     const encodedText = encodeURIComponent(cleanText);
     const audioUrl = `https://text.pollinations.ai/please_say_this:${encodedText}?model=openai-audio&voice=${segment.voice}&speed=${voiceOptions.speed || 1.0}`;
@@ -286,4 +308,34 @@ export const downloadMergedAudio = async (segments: AudioSegment[]): Promise<voi
     console.error('Merged download failed:', error);
     throw error;
   }
+};
+
+export const detectHostsFromScript = (content: string): string[] => {
+  const hosts = new Set<string>();
+  const lines = content.split('\n');
+  
+  lines.forEach(line => {
+    const trimmedLine = line.trim();
+    
+    // Check for [Host Name] format
+    const bracketMatch = trimmedLine.match(/^\[([^\]]+)\]/);
+    if (bracketMatch) {
+      hosts.add(bracketMatch[1].trim());
+    }
+    
+    // Check for Host Name: format
+    const colonMatch = trimmedLine.match(/^([^:]+):/);
+    if (colonMatch) {
+      const hostName = colonMatch[1].trim();
+      // Filter out common non-host patterns
+      if (!hostName.toLowerCase().includes('note') && 
+          !hostName.toLowerCase().includes('scene') && 
+          !hostName.toLowerCase().includes('sound') &&
+          hostName.length < 50) {
+        hosts.add(hostName);
+      }
+    }
+  });
+  
+  return Array.from(hosts).slice(0, 10); // Limit to 10 hosts
 };
