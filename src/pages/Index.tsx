@@ -5,19 +5,26 @@ import ScriptDisplay from '../components/ScriptDisplay';
 import VoiceSelector from '../components/VoiceSelector';
 import AudioGeneration from '../components/AudioGeneration';
 import Footer from '../components/Footer';
-import { ScriptData, GenerationOptions, VoiceOptions, AudioSegment } from '../types/podcast';
-import CustomScriptInput from '../components/CustomScriptInput';
+import { ScriptData, GenerationOptions, VoiceOptions, AudioSegment, Host } from '../types/podcast';
 import MergedAudioPlayer from '../components/MergedAudioPlayer';
+import MultiHostSetup from '../components/MultiHostSetup';
+import EnhancedCustomScriptInput from '../components/EnhancedCustomScriptInput';
+import BackgroundMusicUpload from '../components/BackgroundMusicUpload';
 
 const Index = () => {
   const [generatedScript, setGeneratedScript] = useState<ScriptData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hosts, setHosts] = useState<Host[]>([
+    { id: 'host-1', name: 'Host 1', voice: 'alloy' }
+  ]);
   const [voiceOptions, setVoiceOptions] = useState<VoiceOptions>({
     host: 'alloy',
     guest: 'nova',
     speed: 1.0,
-    backgroundMusic: false
+    backgroundMusic: false,
+    backgroundVolume: 50,
+    hosts
   });
   const [audioSegments, setAudioSegments] = useState<AudioSegment[]>([]);
 
@@ -74,8 +81,17 @@ const Index = () => {
   };
 
   const handleCustomScript = (scriptData: ScriptData) => {
-    setGeneratedScript(scriptData);
-    setAudioSegments([]); // Reset audio segments for new script
+    const updatedScriptData = {
+      ...scriptData,
+      hosts,
+      voiceOptions: {
+        ...voiceOptions,
+        hosts,
+        speed: scriptData.voiceOptions?.speed || voiceOptions.speed
+      }
+    };
+    setGeneratedScript(updatedScriptData);
+    setAudioSegments([]);
     setError(null);
   };
 
@@ -89,12 +105,49 @@ const Index = () => {
     }
   };
 
+  const handleHostsChange = (newHosts: Host[]) => {
+    setHosts(newHosts);
+    const updatedVoiceOptions = {
+      ...voiceOptions,
+      hosts: newHosts,
+      hostStyle: newHosts.length > 1 ? 'multiple' : 'single'
+    };
+    setVoiceOptions(updatedVoiceOptions);
+    
+    if (generatedScript) {
+      setGeneratedScript({
+        ...generatedScript,
+        hosts: newHosts,
+        voiceOptions: updatedVoiceOptions,
+        options: {
+          ...generatedScript.options,
+          hostStyle: newHosts.length > 1 ? 'multiple' : 'single'
+        }
+      });
+    }
+  };
+
+  const handleBackgroundMusicChange = (file: File | undefined) => {
+    setVoiceOptions(prev => ({
+      ...prev,
+      backgroundMusicFile: file,
+      backgroundMusic: !!file
+    }));
+  };
+
+  const handleBackgroundVolumeChange = (volume: number) => {
+    setVoiceOptions(prev => ({
+      ...prev,
+      backgroundVolume: volume
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column - Input and Voice Selection */}
+          {/* Left Column - Input and Configuration */}
           <div className="space-y-6">
             <InputSection 
               onGenerate={handleGenerate}
@@ -102,7 +155,22 @@ const Index = () => {
               error={error}
             />
             
-            <CustomScriptInput onScriptSubmit={handleCustomScript} />
+            <MultiHostSetup
+              hosts={hosts}
+              onHostsChange={handleHostsChange}
+            />
+            
+            <EnhancedCustomScriptInput 
+              onScriptSubmit={handleCustomScript}
+              hosts={hosts}
+            />
+            
+            <BackgroundMusicUpload
+              backgroundMusicFile={voiceOptions.backgroundMusicFile}
+              backgroundVolume={voiceOptions.backgroundVolume}
+              onMusicFileChange={handleBackgroundMusicChange}
+              onVolumeChange={handleBackgroundVolumeChange}
+            />
             
             {generatedScript && (
               <VoiceSelector
@@ -135,6 +203,8 @@ const Index = () => {
                   <MergedAudioPlayer
                     audioSegments={audioSegments}
                     backgroundMusic={voiceOptions.backgroundMusic}
+                    backgroundMusicFile={voiceOptions.backgroundMusicFile}
+                    backgroundVolume={voiceOptions.backgroundVolume}
                   />
                 )}
               </>

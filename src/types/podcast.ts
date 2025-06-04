@@ -9,11 +9,20 @@ export interface GenerationOptions {
   elements: string[];
 }
 
+export interface Host {
+  id: string;
+  name: string;
+  voice: string;
+}
+
 export interface VoiceOptions {
   host: string;
   guest?: string;
   speed: number;
   backgroundMusic: boolean;
+  backgroundVolume: number;
+  backgroundMusicFile?: File;
+  hosts?: Host[];
 }
 
 export interface AudioSegment {
@@ -23,6 +32,7 @@ export interface AudioSegment {
   audioBlob?: Blob;
   duration?: number;
   voice: string;
+  hostName?: string;
   generatingAudio: boolean;
   generationError?: string;
 }
@@ -35,6 +45,7 @@ export interface ScriptData {
   audioSegments?: AudioSegment[];
   voiceOptions?: VoiceOptions;
   isCustomScript?: boolean;
+  hosts?: Host[];
 }
 
 export const AVAILABLE_VOICES = [
