@@ -143,12 +143,41 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      
+      {/* Hero Section */}
+      <section className="bg-gradient-to-br from-primary/5 to-primary/10 border-b border-border">
+        <div className="container mx-auto px-4 py-16 text-center">
+          <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
+            Create Amazing Podcasts with{' '}
+            <span className="text-primary">AI</span>
+          </h1>
+          <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
+            Generate engaging podcast scripts instantly, convert them to natural-sounding audio, 
+            and create professional podcasts with multiple hosts - all completely free!
+          </p>
+          <div className="flex flex-wrap justify-center gap-4 mb-8">
+            <div className="flex items-center gap-2 bg-background/50 rounded-full px-4 py-2 text-sm">
+              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+              100% Free
+            </div>
+            <div className="flex items-center gap-2 bg-background/50 rounded-full px-4 py-2 text-sm">
+              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+              AI-Powered
+            </div>
+            <div className="flex items-center gap-2 bg-background/50 rounded-full px-4 py-2 text-sm">
+              <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+              Multi-Host Support
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <main className="flex-1 container mx-auto px-4 py-12 max-w-7xl">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Left Column - Input and Configuration */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             <InputSection 
               onGenerate={handleGenerate}
               isGenerating={isGenerating}
@@ -182,7 +211,7 @@ const Index = () => {
           </div>
 
           {/* Right Column - Script Display and Audio */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             <ScriptDisplay 
               script={generatedScript}
               isGenerating={isGenerating}
