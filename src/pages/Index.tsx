@@ -10,6 +10,7 @@ import MergedAudioPlayer from '../components/MergedAudioPlayer';
 import MultiHostSetup from '../components/MultiHostSetup';
 import EnhancedCustomScriptInput from '../components/EnhancedCustomScriptInput';
 import BackgroundMusicUpload from '../components/BackgroundMusicUpload';
+import ApiTokenInput from '../components/ApiTokenInput';
 
 const Index = () => {
   const [generatedScript, setGeneratedScript] = useState<ScriptData | null>(null);
@@ -27,6 +28,7 @@ const Index = () => {
     hosts
   });
   const [audioSegments, setAudioSegments] = useState<AudioSegment[]>([]);
+  const [apiToken, setApiToken] = useState<string>('');
 
   const handleGenerate = async (topic: string, options: GenerationOptions) => {
     setIsGenerating(true);
@@ -41,9 +43,17 @@ const Index = () => {
                      ${options.hostStyle === 'multiple' ? 'Include dialogue between multiple hosts.' : 'Single host format.'}`;
 
 
-      const response = await fetch('https://text.pollinations.ai/', {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      let url = 'https://text.pollinations.ai/';
+      
+      if (apiToken) {
+        url = `https://text.pollinations.ai/openai?token=${apiToken}`;
+        headers['Authorization'] = `Bearer ${apiToken}`;
+      }
+
+      const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           messages: [{
             role: 'system',
@@ -178,6 +188,8 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Left Column - Input and Configuration */}
           <div className="space-y-8">
+            <ApiTokenInput onTokenChange={setApiToken} />
+            
             <InputSection 
               onGenerate={handleGenerate}
               isGenerating={isGenerating}
